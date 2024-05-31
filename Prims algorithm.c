@@ -1,120 +1,92 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <limits.h>
 
-#define INF INT_MAX
+int n, cost[10][10], nears[10];
 
-// A structure to represent a graph
-typedef struct {
-    int V;
-    int** adjMatrix;
-} Graph;
-
-// A utility function to create a graph with V vertices
-Graph* createGraph(int V) {
-    Graph* graph = (Graph*) malloc(sizeof(Graph));
-    graph->V = V;
-    graph->adjMatrix = (int**) malloc(V * sizeof(int*));
+void readv() {
     int i, j;
-    for (i = 0; i < V; i++) {
-        graph->adjMatrix[i] = (int*) malloc(V * sizeof(int));
-        for (j = 0; j < V; j++) {
-            graph->adjMatrix[i][j] = INF;
+    printf("Enter the number of nodes or vertices: ");
+    scanf("%d", &n);
+    printf("Enter the cost adjacency matrix of the graph (use 0 for no edge):\n");
+    for (i = 1; i <= n; i++) {
+        for (j = 1; j <= n; j++) {
+            scanf("%d", &cost[i][j]);
+            if ((cost[i][j] == 0) && (i != j)) {
+                cost[i][j] = 999;  // Use a large value to represent infinity
+            }
         }
     }
-    return graph;
 }
 
-// A utility function to print the constructed MST stored in parent[]
-void printMST(int parent[], int V, Graph* graph) {
-	int i;
-    printf("Edge \tWeight\n");
-    for (i = 1; i < V; i++) {
-        printf("%d - %d \t%d \n", parent[i], i, graph->adjMatrix[i][parent[i]]);
-    }
-}
-
-// A utility function to find the vertex with the minimum key value, from the set of vertices not yet included in MST
-int minKey(int key[], bool mstSet[], int V) {
-    int min = INF, min_index, v;
-
-    for (v = 0; v < V; v++) {
-        if (mstSet[v] == false && key[v] < min) {
-            min = key[v], min_index = v;
-        }
+void primsalgo() {
+    int t[10][2];
+    int i, j, k, l, min = 999, u, v, mincost = 0;
+    
+    // Initialize nears array
+    for (i = 1; i <= n; i++) {
+        nears[i] = 999;
     }
 
-    return min_index;
-}
-
-// Function to construct and print MST for a graph represented using adjacency matrix representation
-void primMST(Graph* graph) {
-    int V = graph->V;
-    int parent[V];  // Array to store constructed MST
-    int key[V];     // Key values used to pick minimum weight edge in cut
-    bool mstSet[V]; // To represent set of vertices not yet included in MST
-	int i, v, count;
-	
-    // Initialize all keys as INFINITE
-    for (i = 0; i < V; i++) {
-        key[i] = INF, mstSet[i] = false;
-    }
-
-    // Always include first 1st vertex in MST.
-    key[0] = 0;     // Make key 0 so that this vertex is picked as first vertex
-    parent[0] = -1; // First node is always root of MST
-
-    // The MST will have V vertices
-    for (count = 0; count < V - 1; count++) {
-        // Pick the minimum key vertex from the set of vertices not yet included in MST
-        int u = minKey(key, mstSet, V);
-
-        // Add the picked vertex to the MST Set
-        mstSet[u] = true;
-
-        // Update key value and parent index of the adjacent vertices of the picked vertex.
-        // Consider only those vertices which are not yet included in MST
-        for (v = 0; v < V; v++) {
-            // graph->adjMatrix[u][v] is non zero only for adjacent vertices of m
-            // mstSet[v] is false for vertices not yet included in MST
-            // Update the key only if graph->adjMatrix[u][v] is smaller than key[v]
-            if (graph->adjMatrix[u][v] && mstSet[v] == false && graph->adjMatrix[u][v] < key[v]) {
-                parent[v] = u, key[v] = graph->adjMatrix[u][v];
+    // Find the first edge with the minimum cost
+    for (i = 1; i <= n; i++) {
+        for (j = 1; j <= n; j++) {
+            if (cost[i][j] < min) {
+                min = cost[i][j];
+                u = i;
+                v = j;
             }
         }
     }
 
-    // Print the constructed MST
-    printMST(parent, V, graph);
+    // Store the first edge in the tree
+    t[1][0] = u;
+    t[1][1] = v;
+    mincost = min;
+    nears[u] = nears[v] = 0;
+
+    // Initialize the nears array
+    for (i = 1; i <= n; i++) {
+        if (nears[i] != 0) {
+            if (cost[i][u] < cost[i][v]) {
+                nears[i] = u;
+            } else {
+                nears[i] = v;
+            }
+        }
+    }
+
+    // Construct the rest of the minimum spanning tree
+    for (i = 2; i <= n-1; i++) {
+        min = 999;
+        for (j = 1; j <= n; j++) {
+            if (nears[j] != 0 && cost[j][nears[j]] < min) {
+                min = cost[j][nears[j]];
+                k = j;
+            }
+        }
+
+        t[i][0] = k;
+        t[i][1] = nears[k];
+        mincost += min;
+        nears[k] = 0;
+
+        for (j = 1; j <= n; j++) {
+            if (nears[j] != 0 && cost[j][k] < cost[j][nears[j]]) {
+                nears[j] = k;
+            }
+        }
+    }
+
+    printf("The minimum cost of spanning tree is %d\n", mincost);
+    printf("The edges of the minimum spanning tree are:\n");
+    for (i = 1; i <= n-1; i++) {
+        printf("(%d, %d)\n", t[i][0], t[i][1]);
+    }
 }
 
 int main() {
-    int V, i, j; // Number of vertices
-    printf("Enter the number of vertices: ");
-    scanf("%d", &V);
-
-    Graph* graph = createGraph(V);
-
-    printf("Enter the adjacency matrix (enter %d for infinity):\n", INF);
-    for (i = 0; i < V; i++) {
-        for (j = 0; j < V; j++) {
-            printf("Edge %d-%d: ", i, j);
-            scanf("%d", &graph->adjMatrix[i][j]);
-            if (graph->adjMatrix[i][j] == INF) {
-                graph->adjMatrix[i][j] = INF;
-            }
-        }
-    }
-
-    primMST(graph);
-
-    for (i = 0; i < V; i++) {
-        free(graph->adjMatrix[i]);
-    }
-    free(graph->adjMatrix);
-    free(graph);
-
+    readv();
+    primsalgo();
     return 0;
 }
 
